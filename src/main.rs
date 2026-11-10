@@ -100,7 +100,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn run(terminal: &mut Terminal<impl ratatui::backend::Backend<Error = io::Error>>) -> io::Result<()> {
+fn run(
+    terminal: &mut Terminal<impl ratatui::backend::Backend<Error = io::Error>>,
+) -> io::Result<()> {
     let mut app = App::new();
     loop {
         app.tick();
@@ -129,7 +131,7 @@ fn draw(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(3),
+            Constraint::Min(7),
             Constraint::Length(3),
             Constraint::Length(2),
             Constraint::Length(3),
@@ -140,10 +142,19 @@ fn draw(frame: &mut Frame, app: &App) {
     let seconds = remaining.as_secs();
     let clock = format!("{:02}:{:02}", seconds / 60, seconds % 60);
     let running = app.running_since.is_some();
-    let title = format!(" {} · pomodoro {} ", app.phase.label(), if running { "running" } else { "paused" });
+    let title = format!(
+        " {} · pomodoro {} ",
+        app.phase.label(),
+        if running { "running" } else { "paused" }
+    );
 
-    let timer = Paragraph::new(clock)
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+    let large_clock = large_digits(&clock);
+    let timer = Paragraph::new(large_clock)
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(Block::default().title(title).borders(Borders::ALL))
         .alignment(ratatui::layout::Alignment::Center);
     frame.render_widget(timer, chunks[0]);
@@ -164,4 +175,33 @@ fn draw(frame: &mut Frame, app: &App) {
         .block(Block::default().borders(Borders::ALL))
         .alignment(ratatui::layout::Alignment::Center);
     frame.render_widget(help, chunks[3]);
+}
+
+fn large_digits(clock: &str) -> String {
+    let glyphs = clock.chars().map(|ch| match ch {
+        '0' => ["███", "█ █", "█ █", "█ █", "███"],
+        '1' => [" ██", "  █", "  █", "  █", "███"],
+        '2' => ["███", "  █", "███", "█  ", "███"],
+        '3' => ["███", "  █", "███", "  █", "███"],
+        '4' => ["█ █", "█ █", "███", "  █", "  █"],
+        '5' => ["███", "█  ", "███", "  █", "███"],
+        '6' => ["███", "█  ", "███", "█ █", "███"],
+        '7' => ["███", "  █", "  █", "  █", "  █"],
+        '8' => ["███", "█ █", "███", "█ █", "███"],
+        '9' => ["███", "█ █", "███", "  █", "███"],
+        ':' => ["   ", " █ ", "   ", " █ ", "   "],
+        _ => ["   "; 5],
+    });
+
+    let glyphs: Vec<_> = glyphs.collect();
+    (0..5)
+        .map(|row| {
+            glyphs
+                .iter()
+                .map(|glyph| glyph[row])
+                .collect::<Vec<_>>()
+                .join("  ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
